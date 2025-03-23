@@ -98,15 +98,65 @@ const drawFunctions = {
     },
 
     // 天气效果
-    '下雨': (ctx) => {
-        ctx.strokeStyle = 'rgba(0, 191, 255, 0.5)';
-        for(let i = 0; i < 80; i++) {
+'下雨': (ctx) => {
+    // 雨幕层次控制
+    const rainLayers = [
+        {count: 120, angle: -0.3, minLength: 25, maxLength: 40, speed: 3.5, alpha: 0.6}, // 前景大雨滴
+        {count: 200, angle: -0.2, minLength: 15, maxLength: 25, speed: 2.8, alpha: 0.4}, // 中景雨幕
+        {count: 300, angle: -0.1, minLength: 8, maxLength: 15, speed: 2.0, alpha: 0.2}  // 背景薄雾
+    ];
+
+    const now = Date.now();
+    
+    rainLayers.forEach(layer => {
+        ctx.strokeStyle = `hsla(210, 100%, 85%, ${layer.alpha})`;
+        ctx.lineWidth = Math.random() * 0.8 + 0.5;
+        ctx.lineCap = 'round';
+
+        for(let i = 0; i < layer.count; i++) {
+            // 动态位置计算
+            const baseX = Math.random() * 320 - 10;
+            const baseY = (now * layer.speed/16 + i * 50) % 240 - 40;
+            
+            // 雨滴轨迹参数
+            const length = layer.minLength + Math.random() * (layer.maxLength - layer.minLength);
+            const deviation = Math.random() * 2 - 1;
+            
             ctx.beginPath();
-            ctx.moveTo(Math.random()*300, Math.random()*200);
-            ctx.lineTo(Math.random()*300+10, Math.random()*200+20);
+            ctx.moveTo(baseX, baseY);
+            ctx.lineTo(
+                baseX + Math.cos(layer.angle) * length + deviation,
+                baseY + Math.sin(layer.angle) * length
+            );
+            
+            // 添加雨滴尾部渐隐
+            const gradient = ctx.createLinearGradient(
+                baseX, baseY,
+                baseX + Math.cos(layer.angle) * length,
+                baseY + Math.sin(layer.angle) * length
+            );
+            gradient.addColorStop(0, `hsla(210, 100%, 95%, ${layer.alpha * 0.8})`);
+            gradient.addColorStop(1, `hsla(210, 100%, 95%, 0)`);
+            
+            ctx.strokeStyle = gradient;
             ctx.stroke();
         }
-    },
+    });
+
+    // 添加地面水花效果
+    ctx.fillStyle = 'hsla(210, 100%, 95%, 0.15)';
+    for(let i = 0; i < 80; i++) {
+        const x = Math.random() * 300;
+        const y = 190 + Math.random() * 10;
+        ctx.beginPath();
+        ctx.ellipse(x, y, 
+            Math.random() * 3 + 1, 
+            Math.random() * 1.5 + 0.5, 
+            Math.PI/4, 0, Math.PI * 2
+        );
+        ctx.fill();
+    }
+},
     '下雪': (ctx) => {
         ctx.fillStyle = 'rgba(255,255,255,0.8)';
         for(let i = 0; i < 150; i++) {
@@ -623,6 +673,173 @@ for (let i = 0; i < 10; i++) {
 }
 },
 
+
+
+// 真实风格行星绘制
+'木星': (ctx, x, y, size) => {
+    // 绘制星空背景
+    ctx.fillStyle = '#000';
+    ctx.fillRect(0, 0, 300, 200);
+    drawFunctions.星空(ctx);
+
+    // 创建行星渐变
+    const gradient = ctx.createRadialGradient(
+        x - size/4, y - size/4, size/8,
+        x, y, size
+    );
+    gradient.addColorStop(0, '#F4A460'); // 大红斑区域
+    gradient.addColorStop(0.3, '#CD853F'); // 条纹浅色带
+    gradient.addColorStop(0.6, '#8B4513'); // 条纹深色带
+    gradient.addColorStop(1, '#6B4423'); // 边缘阴影
+    
+    // 绘制行星主体
+    ctx.beginPath();
+    ctx.arc(x, y, size, 0, Math.PI * 2);
+    ctx.fillStyle = gradient;
+    ctx.fill();
+
+    // 添加条纹细节
+    ctx.strokeStyle = 'rgba(139, 69, 19, 0.6)';
+    ctx.lineWidth = 3;
+    for(let i=0; i<8; i++){
+        ctx.beginPath();
+        ctx.arc(x, y, size*0.9, 
+            Math.PI/8 * i, 
+            Math.PI/8 * (i+0.5)
+        );
+        ctx.stroke();
+    }
+
+    // 绘制大红斑
+    ctx.fillStyle = '#B22222';
+    ctx.beginPath();
+    ctx.ellipse(
+        x + size*0.6, y - size*0.3, // 位置
+        size*0.3, size*0.2, // 半径
+        Math.PI/4, 0, Math.PI*2 // 旋转
+    );
+    ctx.fill();
+},
+
+'火星': (ctx, x, y, size) => {
+    ctx.fillStyle = '#000';
+    ctx.fillRect(0, 0, 300, 200);
+    drawFunctions.星空(ctx);
+
+    // 创建火星表面纹理
+    const gradient = ctx.createRadialGradient(
+        x - size/3, y - size/3, size/10,
+        x, y, size
+    );
+    gradient.addColorStop(0, '#CD5C5C');  // 铁锈色高光
+    gradient.addColorStop(1, '#8B0000');  // 深红色阴影
+
+    // 绘制行星主体
+    ctx.beginPath();
+    ctx.arc(x, y, size, 0, Math.PI * 2);
+    ctx.fillStyle = gradient;
+    ctx.fill();
+
+    // 添加陨石坑
+    ctx.fillStyle = 'rgba(0, 0, 0, 0.3)';
+    for(let i=0; i<15; i++){
+        const angle = Math.random() * Math.PI*2;
+        const dist = Math.random() * size*0.8;
+        const craterSize = Math.random() * size*0.1;
+        ctx.beginPath();
+        ctx.arc(
+            x + Math.cos(angle)*dist,
+            y + Math.sin(angle)*dist,
+            craterSize, 0, Math.PI*2
+        );
+        ctx.fill();
+    }
+
+    // 极地冰盖
+    ctx.fillStyle = 'rgba(255, 255, 255, 0.7)';
+    ctx.beginPath();
+    ctx.arc(x, y - size*0.7, size*0.3, 0, Math.PI);
+    ctx.fill();
+},
+
+'海王星': (ctx, x, y, size) => {
+    ctx.fillStyle = '#000';
+    ctx.fillRect(0, 0, 300, 200);
+    drawFunctions.星空(ctx);
+
+    // 创建大气渐变
+    const gradient = ctx.createRadialGradient(
+        x - size/5, y - size/5, size/10,
+        x, y, size
+    );
+    gradient.addColorStop(0, '#4169E1');  // 深蓝高光
+    gradient.addColorStop(1, '#000080');  // 海军蓝阴影
+
+    // 绘制行星主体
+    ctx.beginPath();
+    ctx.arc(x, y, size, 0, Math.PI * 2);
+    ctx.fillStyle = gradient;
+    ctx.fill();
+
+    // 添加风暴效果
+    ctx.strokeStyle = 'rgba(255, 255, 255, 0.7)';
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.ellipse(
+        x + size*0.4, y - size*0.2, // 位置
+        size*0.3, size*0.1,         // 半径
+        Math.PI/4, 0, Math.PI*2     // 旋转
+    );
+    ctx.stroke();
+},
+
+'太阳系': (ctx) => {
+    ctx.fillStyle = '#000';
+    ctx.fillRect(0, 0, 300, 200);
+    
+    // 绘制恒星
+    const sunGradient = ctx.createRadialGradient(150, 100, 0, 150, 100, 50);
+    sunGradient.addColorStop(0, '#FFD700');
+    sunGradient.addColorStop(1, 'rgba(255, 215, 0, 0)');
+    ctx.fillStyle = sunGradient;
+    ctx.beginPath();
+    ctx.arc(150, 100, 60, 0, Math.PI*2);
+    ctx.fill();
+
+    // 绘制行星轨道
+    ctx.strokeStyle = 'rgba(255,255,255,0.2)';
+    const planets = [
+        {size: 8, distance: 40, color: '#A0522D'},  // 水星
+        {size: 12, distance: 70, color: '#DEB887'},  // 金星
+        {size: 14, distance: 100, color: '#228B22'}, // 地球
+        {size: 10, distance: 140, color: '#CD5C5C'}, // 火星
+        {size: 30, distance: 180, color: '#DAA520'}, // 木星
+        {size: 25, distance: 220, color: '#CD853F'}, // 土星
+        {size: 18, distance: 260, color: '#87CEEB'}, // 天王星
+        {size: 17, distance: 290, color: '#4169E1'}   // 海王星
+    ];
+
+    planets.forEach(planet => {
+        // 绘制轨道
+        ctx.beginPath();
+        ctx.arc(150, 100, planet.distance, 0, Math.PI*2);
+        ctx.stroke();
+        
+        // 绘制行星
+        ctx.fillStyle = planet.color;
+        ctx.beginPath();
+        ctx.arc(
+            150 + planet.distance * Math.cos(Date.now()/5000), 
+            100 + planet.distance * Math.sin(Date.now()/5000),
+            planet.size, 0, Math.PI*2
+        );
+        ctx.fill();
+    });
+},
+
+
+
+
 // 坦克
 '坦克': (ctx, x, y, size) => {
 // 履带
@@ -959,6 +1176,140 @@ ctx.stroke();
 }
 },
 
+'小狗': (ctx, x, y, size) => {
+    // 身体基础参数
+    const bodyLength = size * 1.2;
+    const bodyHeight = size * 0.6;
+    
+    // 绘制身体主体（椭圆）
+    ctx.fillStyle = '#8B4513'; // 单一棕色
+    ctx.beginPath();
+    ctx.ellipse(
+        x, y,          // 中心坐标
+        bodyLength/2,  // 横向半径
+        bodyHeight/2,  // 纵向半径
+        0, 0, Math.PI*2
+    );
+    ctx.fill();
+
+    // 绘制颈部连接
+    ctx.fillRect(
+        x - size*0.15,  // X起始位置
+        y - size*0.3,   // Y起始位置
+        size*0.3,       // 颈部宽度
+        size*0.4        // 颈部高度
+    );
+
+    // 绘制头部（圆形）
+    ctx.beginPath();
+    ctx.arc(
+        x + size*0.35,  // 头部X位置
+        y - size*0.25,  // 头部Y位置
+        size*0.3,       // 头部半径
+        0, Math.PI*2
+    );
+    ctx.fill();
+
+    // 绘制四条腿（矩形简化版）
+    const legPositions = [
+        {x: x - size*0.4, y: y + size*0.1},  // 左前腿
+        {x: x - size*0.1, y: y + size*0.15}, // 右前腿
+        {x: x + size*0.3, y: y + size*0.2},  // 左后腿
+        {x: x + size*0.5, y: y + size*0.15}  // 右后腿
+    ];
+    
+    legPositions.forEach(pos => {
+        ctx.fillRect(
+            pos.x,              // 腿X位置
+            pos.y,              // 腿Y位置
+            size*0.12,          // 腿宽度
+            size*0.6            // 腿高度
+        );
+    });
+
+    // 绘制尾巴（三角形）
+    ctx.beginPath();
+    ctx.moveTo(x + size*0.6, y - size*0.1);  // 尾巴起点
+    ctx.lineTo(x + size*0.9, y - size*0.3);  // 尾巴顶点
+    ctx.lineTo(x + size*0.8, y + size*0.1);  // 尾巴终点
+    ctx.closePath();
+    ctx.fill();
+
+    // 绘制耳朵（半圆形）
+    ctx.beginPath();
+    ctx.arc(
+        x + size*0.45,  // 耳朵中心X
+        y - size*0.45,  // 耳朵中心Y
+        size*0.15,      // 耳朵半径
+        Math.PI/2, Math.PI*1.5 // 半圆范围
+    );
+    ctx.fill();
+},
+
+'猫': (ctx, x, y, size) => {
+    // 身体基础参数
+    const bodyLength = size * 1.5;  // 更长的身体
+    const bodyHeight = size * 0.5;  // 更瘦的体型
+
+    // 绘制身体主体（细长椭圆）
+    ctx.fillStyle = '#808080'; // 灰色
+    ctx.beginPath();
+    ctx.ellipse(
+        x, y,            // 中心坐标
+        bodyLength/2,     // 横向半径
+        bodyHeight/2,     // 纵向半径
+        0, 0, Math.PI*2
+    );
+    ctx.fill();
+
+    // 绘制头部（较小的圆形）
+    ctx.beginPath();
+    ctx.arc(
+        x + size*0.6,  // 头部X位置
+        y - size*0.2,  // 头部Y位置
+        size*0.25,     // 头部半径
+        0, Math.PI*2
+    );
+    ctx.fill();
+
+    // 绘制尖耳（三角形）
+    ctx.beginPath();
+    ctx.moveTo(x + size*0.75, y - size*0.4); // 右耳尖
+    ctx.lineTo(x + size*0.65, y - size*0.25); // 右耳基
+    ctx.lineTo(x + size*0.85, y - size*0.25); // 左耳尖
+    ctx.closePath();
+    ctx.fill();
+
+    // 绘制四肢（更细长的矩形）
+    const legPositions = [
+        {x: x - size*0.5, y: y + size*0.1},  // 前左腿
+        {x: x - size*0.2, y: y + size*0.15}, // 前右腿 
+        {x: x + size*0.3, y: y + size*0.2},  // 后左腿
+        {x: x + size*0.6, y: y + size*0.15}  // 后右腿
+    ];
+    
+    legPositions.forEach(pos => {
+        ctx.fillRect(
+            pos.x,         // 腿X位置
+            pos.y,         // 腿Y位置
+            size*0.08,     // 更细的宽度
+            size*0.7       // 更长的腿
+        );
+    });
+
+    // 绘制长尾（弯曲线条）
+    ctx.beginPath();
+    ctx.moveTo(x + size*0.7, y - size*0.1); // 尾巴起点
+    ctx.quadraticCurveTo(
+        x + size*1.1, y - size*0.5,  // 控制点
+        x + size*0.9, y + size*0.1   // 终点
+    );
+    ctx.lineWidth = size*0.1;
+    ctx.strokeStyle = '#808080';
+    ctx.stroke();
+},
+
+
 '大海': (ctx) => {
 // 绘制海洋背景
 const oceanGradient = ctx.createLinearGradient(0, 0, 0, 200);
@@ -1022,6 +1373,27 @@ ctx.moveTo(x, y);
 ctx.lineTo(x - 10, y - 10);
 ctx.stroke();
 }
+},
+
+'星星': (ctx, x, y, size) => {
+    ctx.fillStyle = '#FFD700'; // 金色
+    
+    const points = 5; // 五个角
+    const innerSize = size * 0.4; // 内凹比例
+    
+    ctx.beginPath();
+    for(let i = 0; i < points * 2; i++) {
+        const angle = (i * Math.PI) / points - Math.PI/2;
+        const radius = i % 2 === 0 ? size : innerSize;
+        
+        const px = x + Math.cos(angle) * radius;
+        const py = y + Math.sin(angle) * radius;
+        
+        if(i === 0) ctx.moveTo(px, py);
+        else ctx.lineTo(px, py);
+    }
+    ctx.closePath();
+    ctx.fill();
 },
 
     // 新增元素
@@ -1174,9 +1546,9 @@ function generateImage(text) {
     const elements = [
         '云朵', '太阳', '乌云', '月亮', '飞机',
         '树', '房子', '草', '花', '河', '极光', '坦克', '导弹', '高楼大厦', '地球', '半月', '火山', '树林', '夜晚', '夜空', '晚上', '日落', '大海', 
-        '石头', '沙子', '泥土', '雪地', '激光','星云','伽马射线','黑洞','数字','电脑','草原','大雨','陨石', '爆炸', '地', 
-        '五角星', '人', '星空', '流星','河流', '彩虹', '星球', '土星',
-        '鸟', '动物', '兔子', '火', '银河系', '狗', '车'
+        '石头', '沙子', '泥土', '雪地', '激光','星云','伽马射线','黑洞','数字','电脑','草原','大雨','陨石', '爆炸', '地', '闪电', 
+        '五角星', '人', '星空', '流星','河流', '彩虹', '星球', '土星', '木星','火星','太阳系','海王星', '星星',
+        '鸟', '动物', '兔子', '火', '银河系', '狗', '小狗', '猫', '车'
     ];
 
     elements.forEach(element => {
